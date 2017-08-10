@@ -1,0 +1,22 @@
+{
+  "name": "wmy/aliyun",
+  "description": "aliyun",
+  "keywords": [
+    "aliyun"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "WMY",
+      "email": "mengyang1229@126.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "AliyunMNS\\": "src/AliyunMNS"
+    }
+  },
+  "require": {
+    "guzzlehttp/guzzle": "^6.3"
+  }
+}
