@@ -68,22 +68,26 @@ class Queue
             if(config('aliyun.mns.debug')) logger("AliyunMNS ReceiveMessage Succeed: {$queueName}", [
                 $res->getMessageBody()
             ]);
+            return $res;
         } catch (MnsException $e) {
-            logger()->error("AliyunMNS ReceiveMessage Failed: {$queueName}", [
+            if($e->getCode() !== 404){
+                logger()->error("AliyunMNS ReceiveMessage Failed: {$queueName}", [
+                    'e' => $e,
+                ]);
+            }
+        }
+    }
+    function deleteMessage($queueName, $receiptHandle){
+        $queue = $this->client->getQueueRef($queueName);
+        try {
+            $res = $queue->deleteMessage($receiptHandle);
+            if(config('aliyun.mns.debug')) logger("AliyunMNS DeleteMessage Succeed! : {$queueName}", [
+                $receiptHandle
+            ]);
+        } catch (MnsException $e) {
+            logger()->error("AliyunMNS DeleteMessage Failed: {$queueName}", [
                 'e' => $e,
             ]);
         }
     }
-//    function deleteMessage($queueName){
-//        $queue = $this->client->getQueueRef($queueName);
-//        $res = $queue->receiveMessage(30);
-//        $receiptHandle = $res->getReceiptHandle();
-//        try {
-//            $res = $queue->deleteMessage($receiptHandle);
-//            echo "DeleteMessage Succeed! \n";
-//        } catch (MnsException $e) {
-//            echo "DeleteMessage Failed: " . $e;
-//            return;
-//        }
-//    }
 }
