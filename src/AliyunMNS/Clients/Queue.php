@@ -69,6 +69,9 @@ class Queue
             // it means to send one http-long-polling request which lasts 30 seconds at most.
             $res = $queue->receiveMessage(30);
             $messageEncrypt = $res->getMessageBody();
+            if(empty($messageEncrypt)){
+                return null;
+            }
             $messageBody = $this->decrypt($messageEncrypt);
 
             if(config('aliyun.mns.debug')) logger("AliyunMNS ReceiveMessage Succeed: {$queueName}", [
