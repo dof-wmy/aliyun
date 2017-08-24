@@ -5,6 +5,8 @@ use AliyunMNS\Client;
 use AliyunMNS\Exception\MnsException;
 use AliyunMNS\Requests\SendMessageRequest;
 use AliyunMNS\Requests\CreateQueueRequest;
+use Illuminate\Encryption\Encrypter;
+use Illuminate\Support\Str;
 
 class Queue
 {
@@ -44,11 +46,12 @@ class Queue
         }
     }
     function sendMessage($queueName, $messageBody){
-        $queue = $this->client->getQueueRef($queueName);
+        $messageEncrypt = $this->encrypt($messageBody);
+        $queue = $this->client->getQueueRef($queueName, false);
         // as the messageBody will be automatically encoded
         // the MD5 is calculated for the encoded body
-        $bodyMD5 = md5(base64_encode($messageBody));
-        $request = new SendMessageRequest($messageBody);
+        $bodyMD5 = md5(base64_encode($messageEncrypt));
+        $request = new SendMessageRequest($messageEncrypt);
         try {
             $queue->sendMessage($request);
             if(config('aliyun.mns.debug')) logger("AliyunMNS MessageSent: {$queueName} => {$messageBody}");
@@ -59,16 +62,22 @@ class Queue
         }
     }
     function receiveMessage($queueName){
-        $queue = $this->client->getQueueRef($queueName);
+        $queue = $this->client->getQueueRef($queueName, false);
         $receiptHandle = null;
         try {
             // when receiving messages, it's always a good practice to set the waitSeconds to be 30.
             // it means to send one http-long-polling request which lasts 30 seconds at most.
             $res = $queue->receiveMessage(30);
+            $messageEncrypt = $res->getMessageBody();
+            $messageBody = $this->decrypt($messageEncrypt);
+
             if(config('aliyun.mns.debug')) logger("AliyunMNS ReceiveMessage Succeed: {$queueName}", [
-                $res->getMessageBody()
+                $messageBody,
             ]);
-            return $res;
+            return [
+                'messageBody' => $messageBody,
+                'receiptHandle' => $res->getReceiptHandle(),
+            ];
         } catch (MnsException $e) {
             if($e->getCode() !== 404){
                 logger()->error("AliyunMNS ReceiveMessage Failed: {$queueName}", [
@@ -89,5 +98,26 @@ class Queue
                 'e' => $e,
             ]);
         }
+    }
+
+    function encrypt($str){
+        $Encrypter = new Encrypter($this->getKey(), config('app.cipher'));
+        $messageEncrypt = $Encrypter->encrypt($str, false);
+        return $messageEncrypt;
+    }
+
+    function decrypt($messageEncrypt){
+        $Encrypter = new Encrypter($this->getKey(), config('app.cipher'));
+        $messageBody = $Encrypter->decrypt($messageEncrypt, false);
+        return $messageBody;
+    }
+
+    function getKey(){
+        $key = '';
+        logger(config('aliyun.mns.key'));
+        if (Str::startsWith($key = config('aliyun.mns.key'), 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+        return $key;
     }
 }
