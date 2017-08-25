@@ -25,25 +25,12 @@ class Queue
 
     function createQueue($queueName){
         $request = new CreateQueueRequest($queueName);
-        try {
-            $this->client->createQueue($request);
-            if(config('aliyun.mns.debug')) logger("AliyunMNS QueueCreated: {$queueName}");
-        } catch (MnsException $e) {
-            logger()->error("AliyunMNS CreateQueue Failed: {$queueName}", [
-                'e' => $e,
-            ]);
-        }
-
+        $this->client->createQueue($request);
+        if(config('aliyun.mns.debug')) logger("AliyunMNS QueueCreated: {$queueName}");
     }
     function deleteQueue($queueName){
-        try {
-            $this->client->deleteQueue($queueName);
-            if(config('aliyun.mns.debug')) logger("AliyunMNS DeleteQueue Succeed: {$queueName}");
-        } catch (MnsException $e) {
-            logger()->error("AliyunMNS DeleteQueue Failed: {$queueName}", [
-                'e' => $e,
-            ]);
-        }
+        $this->client->deleteQueue($queueName);
+        if(config('aliyun.mns.debug')) logger("AliyunMNS DeleteQueue Succeed: {$queueName}");
     }
     function sendMessage($queueName, $messageBody){
         $messageEncrypt = $this->encrypt($messageBody);
@@ -52,14 +39,8 @@ class Queue
         // the MD5 is calculated for the encoded body
         $bodyMD5 = md5(base64_encode($messageEncrypt));
         $request = new SendMessageRequest($messageEncrypt);
-        try {
-            $queue->sendMessage($request);
-            if(config('aliyun.mns.debug')) logger("AliyunMNS MessageSent: {$queueName} => {$messageBody}");
-        } catch (MnsException $e) {
-            logger()->error("AliyunMNS SendMessage Failed: {$queueName} => {$messageBody}", [
-                'e' => $e,
-            ]);
-        }
+        $queue->sendMessage($request);
+        if(config('aliyun.mns.debug')) logger("AliyunMNS MessageSent: {$queueName} => {$messageBody}");
     }
     function receiveMessage($queueName){
         $queue = $this->client->getQueueRef($queueName, false);
@@ -73,7 +54,6 @@ class Queue
                 return null;
             }
             $messageBody = $this->decrypt($messageEncrypt);
-
             if(config('aliyun.mns.debug')) logger("AliyunMNS ReceiveMessage Succeed: {$queueName}", [
                 $messageBody,
             ]);
@@ -86,21 +66,16 @@ class Queue
                 logger()->error("AliyunMNS ReceiveMessage Failed: {$queueName}", [
                     'e' => $e,
                 ]);
+                throw new MnsException($e->getCode(), $e->getMessage());
             }
         }
     }
     function deleteMessage($queueName, $receiptHandle){
         $queue = $this->client->getQueueRef($queueName);
-        try {
-            $res = $queue->deleteMessage($receiptHandle);
-            if(config('aliyun.mns.debug')) logger("AliyunMNS DeleteMessage Succeed! : {$queueName}", [
-                $receiptHandle
-            ]);
-        } catch (MnsException $e) {
-            logger()->error("AliyunMNS DeleteMessage Failed: {$queueName}", [
-                'e' => $e,
-            ]);
-        }
+        $res = $queue->deleteMessage($receiptHandle);
+        if(config('aliyun.mns.debug')) logger("AliyunMNS DeleteMessage Succeed! : {$queueName}", [
+            $receiptHandle
+        ]);
     }
 
     function encrypt($str){
