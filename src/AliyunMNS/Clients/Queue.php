@@ -92,7 +92,6 @@ class Queue
 
     function getKey(){
         $key = '';
-        logger(config('aliyun.mns.key'));
         if (Str::startsWith($key = config('aliyun.mns.key'), 'base64:')) {
             $key = base64_decode(substr($key, 7));
         }
